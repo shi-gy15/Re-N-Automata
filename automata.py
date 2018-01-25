@@ -36,6 +36,64 @@ class Automata:
             curq = curq.trans[str[i]]
         return curq.acc
 
+def isNone(cond):
+    if cond:
+        raise Exception('Wrong expression.')
+
+def notNone(cond):
+    if cond is None:
+        raise Exception('Wrong expression.')
+
+class Regex:
+    # supported grammar:
+    # a*
+    # a+
+    # [abcd]
+
+    def __init__(self, expr, alphabet=r'01'):
+
+        funcs = r'*+[]'
+        single = None
+        stack = None
+        length = len(expr)
+        for i in range(length):
+            if expr[i] in alphabet:
+                if stack is not None:
+                    isNone(single)
+                    if expr[i] in stack:
+                        raise Exception('Wrong expression.')
+                    stack.append(expr[i])
+                elif single:
+                    # add(single, automata)
+                    single = expr[i]
+                else:
+                    single = expr[i]
+            elif expr[i] in funcs:
+                if expr[i] == '*' or expr[i] == '+':
+                    isNone(stack)
+                    notNone(single)
+                    # add(single, expr[i], automata)
+                    single = None
+                elif expr[i] == '[':
+                    isNone(stack)
+                    if single:
+                        # add(single, automata)
+                        single = None
+                    stack = []
+                elif expr[i] == ']':
+                    isNone(single)
+                    if stack == []:
+                        raise Exception('Wrong expression.')
+                    single = ''.join(stack)
+                    stack = None
+                else:
+                    raise Exception('Wrong expression.')
+            else:
+                raise Exception('Wrong expression.')
+
+
+
+
 q0 = State()
 q1 = State()
 q2 = State(True)
@@ -47,5 +105,6 @@ q1.add('1', q2)
 q2.add('0', q3)
 q2.add('1', q3)
 
-aut = Automata(q0=q0)
-print(aut.parse('0000'))
+aut = Automata(begin=q0)
+
+reg = Regex(r'0*1*0001[01]+00+0')
