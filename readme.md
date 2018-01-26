@@ -4,11 +4,13 @@
 
 **Function**
 - Regular Expression
+
   `Regex(string, alphabet='01')` returns a Regex object based on string.
 
   `regex.match(string)` returns whether this regex and this string match.
 
 - Automata
+
   `Automata(begin, alphabet='01')` returns an Automata object.
 
   `automata.parse(string)` returns whether this automata accepts this string.
