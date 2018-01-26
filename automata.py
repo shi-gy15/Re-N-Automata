@@ -9,32 +9,49 @@ class State:
         self.acc = acc
 
     def add(self, alpha, q):
-        if type(alpha) == list:
-            for item in alpha:
-                self.trans[item] = q
-        else:
-            self.trans[alpha] = q
+        for item in alpha:
+            if item in self.trans:
+                self.trans[item].append(q)
+            else:
+                self.trans[item] = [q]
 
 class Automata:
 
-    def __init__(self, begin, alphabet=r'01'):
+    def __init__(self, begin, alphabet='01'):
         self.begin = begin
         self.alphabet = alphabet
 
-    def parse(self, str):
-        length = len(str)
-        curq = self.begin
+    def parse(self, string, curq=None):
+        if curq is None:
+            curq = self.begin
+
         if not curq:
             raise Exception('Automata undefined.')
             return False
-        for i in range(length):
-            if str[i] not in self.alphabet:
-                raise Exception('Wrong letter.')
-                return False
-            if str[i] not in curq.trans:
-                return False
-            curq = curq.trans[str[i]]
-        return curq.acc
+
+        # if string ends here
+        if string == '':
+            return curq.acc
+
+        # wrong letter
+        if string[0] not in self.alphabet:
+            raise Exception('Wrong letter.')
+            return False
+
+        # if epsilon trans exists
+        if '~' in curq.trans:
+            if self.parse(string[1:], curq.trans['~'][0]):
+                return True
+        
+        # no trans
+        if string[0] not in curq.trans:
+            return False
+
+        # trans iteration
+        for tr in curq.trans[string[0]]:
+            if self.parse(string[1:], tr):
+                return True
+        return False
 
 def isNone(cond):
     if cond:
@@ -44,6 +61,20 @@ def notNone(cond):
     if cond is None:
         raise Exception('Wrong expression.')
 
+def add(string, q, func=None):
+    q.acc = False
+    qf = State(True)
+    if func == None:
+        q.add(string, qf)
+    else:
+        if func == '*':
+            q.add('~', qf)
+            qf.add(string, qf)
+        elif func == '+':
+            q.add(string, qf)
+            qf.add(string, qf)
+    return qf
+
 class Regex:
     # supported grammar:
     # a*
@@ -51,12 +82,24 @@ class Regex:
     # [abcd]
 
     def __init__(self, expr, alphabet=r'01'):
+        # create automata
+        q0 = State(True)
+        qf = q0
+        self.automata = Automata(q0, alphabet)
 
         funcs = r'*+[]'
+        end = '#'
         single = None
         stack = None
+        expr += end
         length = len(expr)
+
         for i in range(length):
+            if expr[i] == end:
+                isNone(stack)
+                if single:
+                    qf = add(single, qf)
+                break
             if expr[i] in alphabet:
                 if stack is not None:
                     isNone(single)
@@ -64,7 +107,7 @@ class Regex:
                         raise Exception('Wrong expression.')
                     stack.append(expr[i])
                 elif single:
-                    # add(single, automata)
+                    qf = add(single, qf)
                     single = expr[i]
                 else:
                     single = expr[i]
@@ -72,12 +115,12 @@ class Regex:
                 if expr[i] == '*' or expr[i] == '+':
                     isNone(stack)
                     notNone(single)
-                    # add(single, expr[i], automata)
+                    qf = add(single, qf, expr[i])
                     single = None
                 elif expr[i] == '[':
                     isNone(stack)
                     if single:
-                        # add(single, automata)
+                        qf = add(single, qf)
                         single = None
                     stack = []
                 elif expr[i] == ']':
@@ -91,20 +134,25 @@ class Regex:
             else:
                 raise Exception('Wrong expression.')
 
+    def match(self, string):
+        return self.automata.parse(string)
 
+# automata test
+q00 = State()
+q11 = State()
+q22 = State()
+q33 = State(True)
+q00.add('xy', q11)
+q11.add('xy', q11)
+q11.add('~', q22)
+q22.add('xz', q22)
+q22.add('z', q33)
+a2 = Automata(q00, 'xyzv')
+# print(a2.parse('xyxyxyxyxyyxyxxyxxyxxx'))
 
+reg = Regex(r'0*1*0001[01]+00+0', '01')
 
-q0 = State()
-q1 = State()
-q2 = State(True)
-q3 = State()
+print(reg.match('0001111000110110100101100'))
 
-q0.add('0', q1)
-q1.add('0', q1)
-q1.add('1', q2)
-q2.add('0', q3)
-q2.add('1', q3)
-
-aut = Automata(begin=q0)
-
-reg = Regex(r'0*1*0001[01]+00+0')
+r2 = Regex('1+00+0', '01')
+print(r2.match('100'))
